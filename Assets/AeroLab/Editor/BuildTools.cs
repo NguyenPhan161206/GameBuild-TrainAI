@@ -26,6 +26,16 @@ namespace AeroLab.Editor
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
         }
 
+        [MenuItem("AeroLab/Play flight arena")]
+        public static void PlayArena()
+        {
+            if (EditorApplication.isPlayingOrWillChangePlaymode) return;
+            if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            EditorSceneManager.OpenScene(ScenePath);
+            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
+            EditorApplication.EnterPlaymode();
+        }
+
         [MenuItem("AeroLab/Validate project")]
         public static void ValidateProject()
         {

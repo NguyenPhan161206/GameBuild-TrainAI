@@ -12,6 +12,22 @@ Nhiệm vụ: cất cánh từ bãi A, tránh các tòa nhà và hạ cánh an t
 4. Bấm **Play**. Cảnh được dựng bằng mã khi chạy; Game view sẽ có sân thử, xe bay và bảng điều khiển tiếng Việt.
 5. Bấm **Bắt đầu bay** hoặc Enter. Có thể bật/tắt vật cản, đổi seed ở bảng trái trước khi bắt đầu.
 
+### Mở trực tiếp trên Linux khi Hub không nhận ra dự án
+
+Tại thư mục repository, chạy:
+
+```sh
+bash tools/open-unity.sh
+```
+
+Script tìm Editor đúng phiên bản trong các thư mục Unity Hub thông thường, mở checkout bằng `-projectPath`, mở cảnh FlightLab và yêu cầu vào Play Mode. Nó không cài Editor, kích hoạt giấy phép, xóa khóa hay ghi đè dữ liệu dự án. Nếu Editor nằm ở vị trí tùy chỉnh:
+
+```sh
+UNITY_EDITOR='/đường/dẫn/tới/Editor/Unity' bash tools/open-unity.sh
+```
+
+Nếu máy chỉ có Unity Hub, cần cài thêm **Unity Editor 6000.0.62f1** trong mục Installs. Nếu script báo không tìm thấy Editor, kiểm tra mục này trước. Đường mở trực tiếp chưa được thử với Editor thật trên cloud.
+
 | Phím | Chức năng |
 | --- | --- |
 | W / S | Di chuyển theo Z − / + |
