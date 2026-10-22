@@ -1,0 +1,9 @@
+{
+  "name": "AeroLab.Runtime",
+  "rootNamespace": "AeroLab",
+  "references": ["AeroLab.Core"],
+  "includePlatforms": [],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "autoReferenced": true
+}

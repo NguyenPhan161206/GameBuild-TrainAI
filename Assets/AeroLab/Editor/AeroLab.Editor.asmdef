@@ -1,0 +1,9 @@
+{
+  "name": "AeroLab.Editor",
+  "rootNamespace": "AeroLab.Editor",
+  "references": ["AeroLab.Core", "AeroLab.Runtime"],
+  "includePlatforms": ["Editor"],
+  "excludePlatforms": [],
+  "allowUnsafeCode": false,
+  "autoReferenced": true
+}
