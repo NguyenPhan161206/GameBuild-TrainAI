@@ -8,4 +8,8 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/AeroLab/Scenes/FlightLab.unity
     guid: a4c0bfd5ddab4ade81a187e8d537461c
-  m_configObjects: {}
+  - enabled: 1
+    path: Assets/AeroLab/Scenes/DeliveryLab.unity
+    guid: 6b6d8f6b95cc436191ac3efb515f91d9
+  m_configObjects:
+    com.unity.dt.app-ui: {fileID: 11400000, guid: 1b1c20d82303e4b5781c3ef50ac1449f, type: 2}

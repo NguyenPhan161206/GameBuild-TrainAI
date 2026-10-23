@@ -1,9 +1,17 @@
 {
   "dependencies": {
+    "com.unity.sdk.linux-arm64": "1.1.0",
+    "com.unity.sdk.linux-x86_64": "1.1.0",
+    "com.unity.toolchain.linux-x86_64-linux": "1.1.0",
+    "com.unity.modules.adaptiveperformance": "1.0.0",
     "com.unity.modules.audio": "1.0.0",
     "com.unity.modules.imgui": "1.0.0",
-    "com.unity.modules.inputlegacy": "1.0.0",
     "com.unity.modules.jsonserialize": "1.0.0",
-    "com.unity.modules.physics": "1.0.0"
+    "com.unity.modules.physics": "1.0.0",
+    "com.unity.modules.physicscore2d": "1.0.0",
+    "com.unity.modules.tetgen": "1.0.0",
+    "com.unity.modules.timelinefoundation": "1.0.0",
+    "com.unity.modules.vectorgraphics": "1.0.0",
+    "com.unity.ml-agents": "file:../artifacts/packages/com.unity.ml-agents"
   }
 }

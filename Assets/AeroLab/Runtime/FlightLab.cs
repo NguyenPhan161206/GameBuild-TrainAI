@@ -21,17 +21,31 @@ namespace AeroLab
         private FlightCamera flightCamera;
         private FlightHud hud;
 
+        private void OnEnable()
+        {
+            // Unity can reload managed assemblies while retaining native scene objects.
+            // Recreate the non-serialized simulation and rebind the existing renderers.
+            if (Simulation != null) return;
+            foreach (Transform child in transform)
+            {
+                if (child.name != "Generated flight arena" && child.name != "Flight camera" && child.name != "Sun") continue;
+                child.gameObject.SetActive(false);
+                Destroy(child.gameObject);
+            }
+            Awake();
+        }
+
         private void Awake()
         {
             Time.fixedDeltaTime = FlightSimulation.Dt;
             Time.maximumDeltaTime = 0.1f;
             Application.targetFrameRate = 60;
             Simulation = new FlightSimulation();
-            world = gameObject.AddComponent<FlightWorld>();
+            world = GetComponent<FlightWorld>() ?? gameObject.AddComponent<FlightWorld>();
             world.Initialize(this);
-            flightCamera = gameObject.AddComponent<FlightCamera>();
+            flightCamera = GetComponent<FlightCamera>() ?? gameObject.AddComponent<FlightCamera>();
             flightCamera.Initialize(this);
-            hud = gameObject.AddComponent<FlightHud>();
+            hud = GetComponent<FlightHud>() ?? gameObject.AddComponent<FlightHud>();
             hud.Initialize(this);
             ResetFlight();
         }

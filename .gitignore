@@ -22,3 +22,10 @@ node_modules/
 artifacts/
 *.log
 .DS_Store
+!tools/DeliveryRunner/DeliveryRunner.csproj
+results/
+*.onnx
+*.pt
+Assets/AeroLab/Resources/DeliveryBuildInfo.json*
+Assets/AeroLab/Resources/Models/
+Assets/AeroLab/Resources/Models.meta

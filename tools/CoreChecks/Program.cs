@@ -123,6 +123,7 @@ internal static class Program
                 Assert(s.Result == FlightResult.Success, $"seed {seed}: {s.Result}, position {s.Position}, time {s.Elapsed}");
             }
         });
+        DeliveryChecks.Run(Check);
         string root = Path.GetFullPath(Path.Combine(AppContext.BaseDirectory, "../../../../../"));
         Check("All Unity C# files pass C# 9 syntax parsing (not Unity API compilation)", () => {
             string[] files = Directory.GetFiles(Path.Combine(root, "Assets"), "*.cs", SearchOption.AllDirectories);

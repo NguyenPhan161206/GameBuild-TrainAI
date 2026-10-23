@@ -1,7 +1,11 @@
 {
   "name": "AeroLab.Runtime",
   "rootNamespace": "AeroLab",
-  "references": ["AeroLab.Core"],
+  "references": [
+    "AeroLab.Core",
+    "Unity.ML-Agents",
+    "Unity.InferenceEngine"
+  ],
   "includePlatforms": [],
   "excludePlatforms": [],
   "allowUnsafeCode": false,

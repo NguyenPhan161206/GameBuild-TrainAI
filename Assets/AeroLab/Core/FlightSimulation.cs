@@ -39,6 +39,7 @@ namespace AeroLab.Core
 
         private readonly List<Building> buildings = new List<Building>();
         private int landingTicks;
+        private int timeLimitTicks = MaxTicks;
         public Vector3 Position { get; internal set; }
         public Vector3 Velocity { get; internal set; }
         public Vector3 Start { get; private set; }
@@ -58,6 +59,7 @@ namespace AeroLab.Core
         public void Reset(int seed = 0, bool obstacles = true)
         {
             Seed = seed;
+            timeLimitTicks = MaxTicks;
             // Explicit PRNG: layouts do not depend on System.Random's runtime version.
             uint state = unchecked((uint)seed);
             Vector3 shift = seed == 0 ? Vector3.Zero : new Vector3(Next(ref state), 0, Next(ref state));
@@ -77,6 +79,15 @@ namespace AeroLab.Core
             TotalReward = 0;
             Result = FlightResult.None;
             Running = false;
+        }
+
+        // Delivery legs reuse the exact same integration and collision rules.
+        public void ResetLeg(Vector3 start, Vector3 goal, IReadOnlyList<Building> layout)
+        {
+            if (!Finite(start) || !Finite(goal) || layout == null) throw new ArgumentException("Invalid leg");
+            Position = Start = start; Goal = goal; Velocity = Vector3.Zero;
+            buildings.Clear(); foreach (var building in layout) buildings.Add(building);
+            Ticks = landingTicks = 0; timeLimitTicks = 6000; TotalReward = 0; Result = FlightResult.None; Running = false;
         }
 
         public void Begin() { if (Result == FlightResult.None) Running = true; }
@@ -125,7 +136,7 @@ namespace AeroLab.Core
             if (hit) Result = FlightResult.Collision;
             else if (outside) Result = FlightResult.OutOfBounds;
             else if (landingTicks >= 50) Result = FlightResult.Success;
-            else if (Ticks >= MaxTicks) Result = FlightResult.Timeout;
+            else if (Ticks >= timeLimitTicks) Result = FlightResult.Timeout;
             float reward = (oldDistance - Vector3.Distance(Position, Goal)) * 0.1f - Dt * 0.02f;
             if (Result == FlightResult.Success) reward += 10;
             else if (Result == FlightResult.Collision || Result == FlightResult.OutOfBounds) reward -= 5;
@@ -180,7 +191,7 @@ namespace AeroLab.Core
             values[3] = Velocity.X / 8; values[4] = Velocity.Y / 3; values[5] = Velocity.Z / 8;
             values[6] = (Position.Y - Half.Y) / Ceiling; values[7] = Grounded ? 1 : 0;
             Array.Copy(Sensors(), 0, values, 8, Directions.Length);
-            values[18] = 1 - Elapsed / 60; values[19] = LandingProgress;
+            values[18] = 1 - (float)Ticks / timeLimitTicks; values[19] = LandingProgress;
             return values;
         }
 

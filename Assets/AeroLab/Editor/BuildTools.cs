@@ -8,22 +8,15 @@ using UnityEngine;
 
 namespace AeroLab.Editor
 {
-    [InitializeOnLoad]
     public static class BuildTools
     {
         public const string ScenePath = "Assets/AeroLab/Scenes/FlightLab.unity";
-        private const string SmokeKey = "AeroLab.Smoke.Active";
-        private const string StartedKey = "AeroLab.Smoke.Started";
-        private const string DeadlineKey = "AeroLab.Smoke.Deadline";
-
-        static BuildTools() { EditorApplication.update += UpdateSmoke; }
-
         [MenuItem("AeroLab/Open flight arena")]
         public static void OpenArena()
         {
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             EditorSceneManager.OpenScene(ScenePath);
-            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
+            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true), new EditorBuildSettingsScene(DeliveryBuildTools.ScenePath, true) };
         }
 
         [MenuItem("AeroLab/Play flight arena")]
@@ -32,7 +25,7 @@ namespace AeroLab.Editor
             if (EditorApplication.isPlayingOrWillChangePlaymode) return;
             if (!Application.isBatchMode && !EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
             EditorSceneManager.OpenScene(ScenePath);
-            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true) };
+            EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(ScenePath, true), new EditorBuildSettingsScene(DeliveryBuildTools.ScenePath, true) };
             EditorApplication.EnterPlaymode();
         }
 
@@ -59,48 +52,10 @@ namespace AeroLab.Editor
         {
             if (EditorApplication.isPlayingOrWillChangePlaymode) throw new InvalidOperationException("Stop Play Mode before starting the smoke test.");
             ValidateProject();
-            SessionState.SetBool(SmokeKey, true);
-            SessionState.SetBool(StartedKey, false);
-            SessionState.SetFloat(DeadlineKey, (float)EditorApplication.timeSinceStartup + 120);
+            var lab = UnityEngine.Object.FindAnyObjectByType<FlightLab>();
+            var probe = lab.gameObject.AddComponent<RuntimeSmokeProbe>();
+            probe.Delivery = false;
             EditorApplication.EnterPlaymode();
-        }
-
-        private static void UpdateSmoke()
-        {
-            if (!SessionState.GetBool(SmokeKey, false)) return;
-            if (EditorApplication.timeSinceStartup > SessionState.GetFloat(DeadlineKey, 0))
-            { FinishSmoke(false, "Play Mode smoke test exceeded 120 seconds."); return; }
-            if (!EditorApplication.isPlaying) return;
-            try
-            {
-                FlightLab lab = UnityEngine.Object.FindFirstObjectByType<FlightLab>();
-                if (lab == null || lab.Simulation == null) return;
-                if (!SessionState.GetBool(StartedKey, false))
-                {
-                    lab.StartDemo();
-                    SessionState.SetBool(StartedKey, true);
-                    return;
-                }
-                if (lab.Simulation.Result == FlightResult.None) return;
-                if (lab.Simulation.Result != FlightResult.Success) throw new InvalidOperationException("Demo ended: " + lab.Simulation.Result);
-                lab.ResetFlight();
-                if (lab.Simulation.Running || lab.Simulation.Elapsed != 0 || lab.Simulation.TotalReward != 0)
-                    throw new InvalidOperationException("Reset did not clear runtime state.");
-                lab.StartManual();
-                lab.TogglePause();
-                if (!lab.Paused || !lab.Simulation.Running) throw new InvalidOperationException("Pause is broken.");
-                FinishSmoke(true, "AEROLAB_PLAYMODE_SMOKE_PASS");
-            }
-            catch (Exception error) { FinishSmoke(false, error.ToString()); }
-        }
-
-        private static void FinishSmoke(bool passed, string message)
-        {
-            SessionState.SetBool(SmokeKey, false);
-            SessionState.SetBool(StartedKey, false);
-            if (passed) Debug.Log(message); else Debug.LogError(message);
-            if (Application.isBatchMode) EditorApplication.Exit(passed ? 0 : 1);
-            else EditorApplication.ExitPlaymode();
         }
 
         [MenuItem("AeroLab/Build/Linux x64")]
