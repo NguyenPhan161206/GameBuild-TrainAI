@@ -1,5 +1,7 @@
 # Kết quả triển khai và kiểm tra môi trường
 
+> Historical snapshot of the initial FlightLab/cloud validation. For current local DeliveryLab verification, see [delivery-validation.md](delivery-validation.md).
+
 Ngày ghi nhận: 22/10/2026. Unity là yêu cầu bắt buộc của người dùng. Các file thử Godot đã tạo trong lúc thăm dò đã được gỡ khỏi repository.
 
 ## Phạm vi đã triển khai

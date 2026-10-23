@@ -1,12 +1,29 @@
 # AeroLab — GameBuild-TrainAI
 
-Game Unity 3D mô phỏng xe bay tự hành, hướng tới môi trường huấn luyện và đánh giá AI.
+Dự án Unity 3D nghiên cứu drone không camera và AI giao hàng trong khuôn viên.
 
-Nhiệm vụ: cất cánh từ bãi A, tránh các tòa nhà và hạ cánh an toàn tại bãi B trong 60 giây.
+- **DeliveryLab:** một kho/sạc, bốn điểm giao, pin, tải trọng, hạn giao, cảm biến khoảng cách và hai tầng AI bay/điều phối.
+- **FlightLab:** giữ sân xe bay A–B trong 60 giây để lái tay và kiểm tra hồi quy.
+
+Mô hình học máy được phân biệt với bộ điều khiển theo luật. Các model fine-v1 đã đạt 100/100 chuyến giao–quay về đơn lẻ cho mỗi seed ở cả hai chế độ cảm biến. Kết quả lịch sử nhiều đơn vẫn có lỗi hết thời gian; nghiên cứu tiếp nối được nghiệm thu riêng.
+
+## Theo dõi thay đổi cục bộ
+
+Chạy `python3 tools/worktree-report.py --html`, rồi mở [bảng thay đổi](artifacts/worktree/index.html) để xem file theo nhóm, lọc trạng thái và đọc diff. Chạy lại lệnh và tải lại trang khi cần cập nhật. Không bắt buộc commit/push sau mỗi lần sửa; xem [quy trình Git](docs/git-workflow.md) và [quy định làm việc](AGENTS.md).
+
+## DeliveryLab — drone không camera và logistics
+
+Mở **AeroLab → Open delivery campus**, bấm **Play → Bắt đầu / Tiếp tục**. Một drone giao từ kho tới bốn điểm và quay về sạc; có hạn giao, tải trọng, pin và cảm biến khoảng cách. Chế độ mặc định là **tham chiếu theo luật**, không phải AI được huấn luyện.
+
+Chạy `bash tools/setup-delivery-ai.sh` trước khi Unity import trong checkout mới. Xem [hướng dẫn DeliveryLab](docs/delivery-lab.md) để kiểm thử, build, huấn luyện hai tầng PPO, đóng băng model và đánh giá theo seed. Package ML-Agents 4.0.0 cần bản vá API Match3 có điều kiện và cấu hình importer gRPC Linux để biên dịch với Unity 6000.6; setup tái tạo bản vá từ archive chính thức đã kiểm checksum.
+
+## Tiếp tục huấn luyện và dùng Colab
+
+Xem [quy trình lưu–khôi phục, chuyển máy và nghiên cứu nhiều chuyến](docs/delivery-continuation.md). Mỗi phiên mặc định tối đa hai giờ; dùng lại đúng cấu hình với `--resume` để tiếp tục checkpoint đã kiểm tra. [Notebook Colab](notebooks/AeroLab-Colab.ipynb) được chuẩn bị để người dùng chạy và kiểm tra trên tài khoản của mình.
 
 ## Mở và chơi bằng Unity
 
-1. Cài Unity Hub và **Unity 6 LTS — 6000.0.62f1**, kích hoạt giấy phép hợp lệ trong Hub. Đây là phiên bản dự án nhắm tới; Editor chưa chạy được trên cloud hiện tại.
+1. Cài Unity Hub và **Unity 6000.6.7f1**, kích hoạt giấy phép hợp lệ trong Hub. Đây là phiên bản đã dùng để xác minh trên máy cục bộ; cloud được kiểm tra riêng.
 2. Trong Hub chọn **Add → Add project from disk**, chọn thư mục gốc repository, nơi có `Assets`, `Packages`, `ProjectSettings`.
 3. Đợi Unity import và biên dịch. Mở `Assets/AeroLab/Scenes/FlightLab.unity`, hoặc chọn menu **AeroLab → Open flight arena**.
 4. Bấm **Play**. Cảnh được dựng bằng mã khi chạy; Game view sẽ có sân thử, xe bay và bảng điều khiển tiếng Việt.
@@ -26,7 +43,7 @@ Script tìm Editor đúng phiên bản trong các thư mục Unity Hub thông th
 UNITY_EDITOR='/đường/dẫn/tới/Editor/Unity' bash tools/open-unity.sh
 ```
 
-Nếu máy chỉ có Unity Hub, cần cài thêm **Unity Editor 6000.0.62f1** trong mục Installs. Nếu script báo không tìm thấy Editor, kiểm tra mục này trước. Đường mở trực tiếp chưa được thử với Editor thật trên cloud.
+Nếu máy chỉ có Unity Hub, cần cài thêm **Unity Editor 6000.6.7f1** trong mục Installs. Nếu script báo không tìm thấy Editor, kiểm tra mục này trước. Đường mở trực tiếp chưa được thử với Editor thật trên cloud.
 
 | Phím | Chức năng |
 | --- | --- |
@@ -99,4 +116,6 @@ Mô phỏng chạy bước cố định 0,02 giây; hình khối và va chạm A
 
 ## Trạng thái
 
-Đã có mã nguồn bản lái tay, cảnh khởi động và chế độ bay mẫu. Core được kiểm thử trên cloud. Unity Editor và Play Mode chưa được kiểm chứng do thiếu Editor và truy cập tới máy chủ Unity đang bị proxy chặn. Chưa có ML-Agents, cầu nối Python, model học máy hoặc kết quả nghiệm thu mốc B. Xem báo cáo môi trường để phân biệt phần đã chạy và phần chưa chạy.
+DeliveryLab có mã mô phỏng, giao diện tiếng Việt, bản Linux, adapter ML-Agents, cấu hình PPO, đóng băng/checksum model, đánh giá và pipeline ba seed. Đã chạy kiểm thử core, kiểm tra trong Unity, huấn luyện ngắn và xuất/nạp model cho cả hai tầng. Các model kiểm tra ngắn **chưa đạt nghiệm thu chất lượng**; model fine-v1 đã đạt bài toán một chuyến. Xem báo cáo tiếp nối để phân biệt kết quả này với nghiệm thu vận hành nhiều chuyến. Chế độ mặc định vẫn ghi rõ **tham chiếu theo luật**.
+
+Xem [báo cáo xác minh DeliveryLab](docs/delivery-validation.md) và [hướng dẫn tái lập](docs/delivery-lab.md). Tài liệu kiểm tra cloud/FlightLab ban đầu là ảnh chụp trạng thái lịch sử, không mô tả toàn bộ dự án hiện tại.
