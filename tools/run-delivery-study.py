@@ -47,8 +47,8 @@ def freeze(model,name):
   if digest(target)!=digest(model):raise ValueError('Frozen resource differs: '+name)
  else:run('freeze-delivery-model.py',model,'--layer','dispatch','--name',name.removeprefix('Models/'))
 def aggregate(rows):
- keys=['on_time_rate','delivered','on_time','operational_safe_episodes','mean_energy','mean_distance']
- return {key:{'mean':statistics.mean(r[key] for r in rows),'sample_stdev':statistics.stdev(r[key] for r in rows)} for key in keys}
+ keys=['on_time_rate','delivered','on_time','operational_safe_episodes','safe_returns','trips','rejected','failed','unfinished','mean_elapsed','mean_delivery_latency','mean_energy','mean_distance','energy_per_delivered']
+ return {key:({'mean':statistics.mean(r[key] for r in rows),'sample_stdev':statistics.stdev(r[key] for r in rows)} if all(r.get(key) is not None for r in rows) else {'mean':None,'sample_stdev':None,'reason':'Undefined in one or more seeds'}) for key in keys}
 def evaluate_jobs(jobs,section):
  # Each worker owns a distinct evaluation directory. Only this thread writes study state.
  with ThreadPoolExecutor(max_workers=a.workers) as executor:
@@ -130,7 +130,9 @@ elif a.action=='final':
    state['aggregates'][f'{stage}-{kind}-{noisy}']=aggregate(rows)
  state['complete']=True;state['qualified_flight']=all(r['safe_complete_roundtrips']>=90 for r in state['test'].values() if r['stage']==1);state['qualified_logistics']=all(r['logistics_target_met'] for r in state['test'].values() if r['stage']==3);save()
 elif a.action=='package':
- for kind in ['source','linux','evidence','training']:
-  run('delivery-transfer.py','pack','--kind',kind,'--output',out/(cfg['tag']+'-'+kind+'.zip'))
+ for kind,name in [('source','AeroLab-source.zip'),('linux','AeroLab-linux.zip'),('evidence','AeroLab-models-evidence.zip'),('training','AeroLab-training.zip')]:
+  args=['pack','--kind',kind,'--output',out/name]
+  if kind=='training':args+=['--run',f"{cfg['dispatch_tag']}-dispatch-s11-stage3-noisy"]
+  run('delivery-transfer.py',*args)
 else:print(json.dumps(state,indent=2));raise SystemExit(0)
 print(state_path)

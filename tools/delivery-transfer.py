@@ -72,11 +72,13 @@ def tree(folder):
  for path in folder.rglob('*'):
   if not path.is_file() or path.is_symlink():continue
   if any(v in path.relative_to(folder).parts for v in ['bin','obj','__pycache__','.git']):continue
+  if path.name in ['.session.lock','.evaluation.lock','.study.lock']:continue
   files.add(path)
 if a.kind in ['source','training']:
  for folder in ['Assets','Packages','ProjectSettings','tools','training','docs','notebooks']:tree(root/folder)
  for name in ['README.md','.gitignore']:files.add(root/name)
- if a.kind=='source':files={f for f in files if 'Models' not in f.parts and not f.name.startswith('DeliveryBuildInfo')}
+ if (root/'AGENTS.md').exists():files.add(root/'AGENTS.md')
+ if a.kind=='source':files={f for f in files if 'Models' not in f.parts and f.name!='Models.meta' and not f.name.startswith('DeliveryBuildInfo')}
 if a.kind in ['linux','training']:
  current=root/'Builds/Delivery/current.json';version=json.loads(current.read_text())['version']
  if a.kind=='training' and a.run:
@@ -91,25 +93,49 @@ if a.kind in ['linux','training']:
  virtual['Builds/Delivery/AeroLabDelivery.x86_64']=(('#!/bin/sh\nexec "$(dirname "$0")/../DeliveryVersions/'+version+'/AeroLabDelivery.x86_64" "$@"\n').encode(),0o755)
  for path in (root/'artifacts/packages/com.unity.ml-agents').glob('*LICENSE*'):
   if path.is_file() and not path.name.endswith('.meta'):files.add(path)
+ for path in (root/'Assets/AeroLab/Resources/Fonts').glob('*LICENSE*'):
+  if path.is_file() and not path.name.endswith('.meta'):files.add(path)
+ if a.kind=='linux':
+  virtual['START-HERE.txt']=(b'AeroLab Delivery (Linux x86_64)\n\nFrom this extracted directory:\n  ./Builds/Delivery/AeroLabDelivery.x86_64\n\nThe default is the labelled scripted reference. For learned dispatch:\n  ./Builds/Delivery/AeroLabDelivery.x86_64 --delivery-mode dispatch-eval --flight-model Models/campus-flight-s11 --dispatch-model Models/campus-dispatch-s11\n\nPress Start/Resume in the Vietnamese interface. Keep Builds/Delivery and Builds/DeliveryVersions together. This is a bounded synthetic simulator, not real-drone control.\n',0o644)
 if a.kind=='evidence':
- tree(root/'artifacts/evaluations');tree(root/'artifacts/studies');tree(root/'Assets/AeroLab/Resources/Models')
+ tree(root/'artifacts/evaluations');tree(root/'Assets/AeroLab/Resources/Models')
+ for path in (root/'artifacts/studies').rglob('*'):
+  if path.is_file() and path.suffix in ['.json','.csv','.log'] and not path.name.endswith('.zip.sha256.json'):files.add(path)
+ if (root/'Assets/AeroLab/Resources/Models.meta').exists():files.add(root/'Assets/AeroLab/Resources/Models.meta')
  for path in (root/'results').rglob('*.json'):
   if path.name in ['run.json','dagger.json','pretraining.json','calibration.json']:files.add(path)
+ for path in (root/'results').rglob('checkpoint.pt'):
+  if path.parent.name in ['DeliveryFlight','DeliveryDispatch']:files.add(path)
+ for path in (root/'results').glob('*/configuration.yaml'):files.add(path)
  for path in (root/'artifacts').glob('*invocation.json'):files.add(path)
  if (root/'artifacts/datasets').is_dir():tree(root/'artifacts/datasets')
+ if (root/'artifacts/expert-episodes-v1').is_dir():tree(root/'artifacts/expert-episodes-v1')
+ for seed in [11,29,47]:
+  folder=root/f'artifacts/training-episodes/continuity-ppo-v2-flight-s{seed}-stage3-noisy'
+  if folder.is_dir():tree(folder)
  if (root/'artifacts/references').is_dir():tree(root/'artifacts/references')
  if (root/'artifacts/portability/portability-final-v2').exists():
-  files.add(root/'artifacts/portability/portability-final-v2/acceptance.json')
+  for path in (root/'artifacts/portability/portability-final-v2').glob('*.json'):files.add(path)
+ if (root/'artifacts/previews/campus-release.png').exists():files.add(root/'artifacts/previews/campus-release.png')
  for folder in ['docs','training']:tree(root/folder)
- for name in ['core-checks.log','delivery-smoke.log','flight-regression-final.log']:
+ for name in ['core-checks.log','recovery-core-checks.log','workflow-tests.log','delivery-smoke.log','flight-regression-final.log','continuity-flight-smoke.log','delivery-build.log']:
   if (root/'artifacts'/name).exists():files.add(root/'artifacts'/name)
  study_config=root/'training/studies/continuity-v2.json'
  if study_config.exists():
-  audit=json.loads(study_config.read_text()).get('inherited_validation')
+  configuration=json.loads(study_config.read_text());audit=configuration.get('inherited_validation')
   if audit:
    archives=[f for f in (root/'artifacts/packages').glob('*.zip') if digest(f)==audit['archive_sha256']]
    if not archives:raise ValueError('The reviewed parent source archive is required in the evidence bundle')
    files.add(archives[0])
+  study=root/'artifacts/studies'/configuration['tag']/'study.json'
+  if study.exists():
+   # Retain the exact final-research player even when a later demo adds model aliases.
+   versions={r.get('build_version') for r in json.loads(study.read_text()).get('test',{}).values()}
+   for version in versions:
+    if not version or len(version)!=32 or any(c not in '0123456789abcdef' for c in version):raise ValueError('Invalid research build ID')
+    folder=root/'Builds/DeliveryVersions'/version
+    if not folder.is_dir():raise ValueError('Missing immutable research player: '+version)
+    tree(folder)
 if a.run:
  if not a.run.replace('-','').replace('_','').isalnum():raise ValueError('Invalid run')
  run=root/'results'/a.run
@@ -123,12 +149,20 @@ if a.run:
  if not valid:raise ValueError('No verified snapshot; legacy runs need a new training session')
  for folder in valid[:3]:tree(folder)
  files.add(run/'run.json');files.add(run/'configuration.yaml')
+ latest=verify_snapshot(valid[0]);behavior=latest['behavior']
+ if behavior not in ['DeliveryFlight','DeliveryDispatch']:raise ValueError('Unknown checkpoint behavior')
+ # Also supply the SDK layout for initialize-from, using verified bytes rather than a mutable last-write file.
+ prefix='results/'+a.run+'/'
+ virtual[prefix+behavior+'/checkpoint.pt']=((valid[0]/'checkpoint.pt').read_bytes(),0o644)
+ virtual[prefix+behavior+'.onnx']=((valid[0]/'model.onnx').read_bytes(),0o644)
 if a.kind=='checkpoint' and not a.run:p.error('--run required')
 manifest={'schema':1,'kind':a.kind,'run':a.run,'trusted_pytorch_only':True,'files':{}}
 a.output.parent.mkdir(parents=True,exist_ok=True);temporary=a.output.with_suffix(a.output.suffix+'.tmp')
 with zipfile.ZipFile(temporary,'w',zipfile.ZIP_DEFLATED) as z:
  for path in sorted(files):
-  name=path.relative_to(root).as_posix();manifest['files'][name]={'sha256':digest(path),'mode':stat.S_IMODE(path.stat().st_mode)};z.write(path,name)
+  name=path.relative_to(root).as_posix()
+  if name in virtual:continue
+  manifest['files'][name]={'sha256':digest(path),'mode':stat.S_IMODE(path.stat().st_mode)};z.write(path,name)
  for name,(content,mode) in virtual.items():
   import hashlib
   manifest['files'][name]={'sha256':hashlib.sha256(content).hexdigest(),'mode':mode};z.writestr(name,content)

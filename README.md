@@ -5,7 +5,9 @@ Dự án Unity 3D nghiên cứu drone không camera và AI giao hàng trong khu�
 - **DeliveryLab:** một kho/sạc, bốn điểm giao, pin, tải trọng, hạn giao, cảm biến khoảng cách và hai tầng AI bay/điều phối.
 - **FlightLab:** giữ sân xe bay A–B trong 60 giây để lái tay và kiểm tra hồi quy.
 
-Mô hình học máy được phân biệt với bộ điều khiển theo luật. Các model fine-v1 đã đạt 100/100 chuyến giao–quay về đơn lẻ cho mỗi seed ở cả hai chế độ cảm biến. Kết quả lịch sử nhiều đơn vẫn có lỗi hết thời gian; nghiên cứu tiếp nối được nghiệm thu riêng.
+Đợt nghiên cứu `continuity-v2-r2` đã hoàn tất 2.400 lượt kiểm thử: 600 lượt một đơn đều giao–quay về thành công; 1.800 phiên nhiều đơn đều đạt tiêu chí vận hành mô phỏng, không ghi nhận sự cố bay. Phiên nhiều đơn dừng ở mốc 900 giây và vẫn có đơn chưa hoàn tất.
+
+AI điều phối đạt 39,00% đúng hạn ở cấu hình lý tưởng và 38,72% khi có nhiễu; FIFO lần lượt 17,28% và 17,00%. AI giao được ít đơn hơn tổng thể. Xem [báo cáo kết quả và giới hạn](docs/delivery-progress.md).
 
 ## Theo dõi thay đổi cục bộ
 
@@ -19,7 +21,7 @@ Chạy `bash tools/setup-delivery-ai.sh` trước khi Unity import trong checkou
 
 ## Tiếp tục huấn luyện và dùng Colab
 
-Xem [quy trình lưu–khôi phục, chuyển máy và nghiên cứu nhiều chuyến](docs/delivery-continuation.md). Mỗi phiên mặc định tối đa hai giờ; dùng lại đúng cấu hình với `--resume` để tiếp tục checkpoint đã kiểm tra. [Notebook Colab](notebooks/AeroLab-Colab.ipynb) được chuẩn bị để người dùng chạy và kiểm tra trên tài khoản của mình.
+Xem [quy trình lưu–khôi phục, chuyển máy và nghiên cứu nhiều chuyến](docs/delivery-continuation.md). Mỗi phiên mặc định tối đa hai giờ; dùng lại đúng cấu hình với `--resume` để tiếp tục checkpoint đã kiểm tra. [Notebook Colab](notebooks/AeroLab-Colab.ipynb) hỗ trợ phiên mới và khôi phục snapshot từ Drive; chưa được chạy trên Colab thật. Quy trình đóng gói–chuyển thư mục–tiếp tục–nhập lại checkpoint đã qua kiểm tra cục bộ.
 
 ## Mở và chơi bằng Unity
 
@@ -116,6 +118,8 @@ Mô phỏng chạy bước cố định 0,02 giây; hình khối và va chạm A
 
 ## Trạng thái
 
-DeliveryLab có mã mô phỏng, giao diện tiếng Việt, bản Linux, adapter ML-Agents, cấu hình PPO, đóng băng/checksum model, đánh giá và pipeline ba seed. Đã chạy kiểm thử core, kiểm tra trong Unity, huấn luyện ngắn và xuất/nạp model cho cả hai tầng. Các model kiểm tra ngắn **chưa đạt nghiệm thu chất lượng**; model fine-v1 đã đạt bài toán một chuyến. Xem báo cáo tiếp nối để phân biệt kết quả này với nghiệm thu vận hành nhiều chuyến. Chế độ mặc định vẫn ghi rõ **tham chiếu theo luật**.
+DeliveryLab có mô phỏng giao hàng, giao diện tiếng Việt, bản Linux và hai tầng model đã được kiểm thử trên ba seed độc lập. Kết quả cuối đạt các mốc ổn định đã định nghĩa trong môi trường tổng hợp; không chứng minh khả năng điều khiển drone thật hoặc tránh mọi loại vật cản.
 
-Xem [báo cáo xác minh DeliveryLab](docs/delivery-validation.md) và [hướng dẫn tái lập](docs/delivery-lab.md). Tài liệu kiểm tra cloud/FlightLab ban đầu là ảnh chụp trạng thái lịch sử, không mô tả toàn bộ dự án hiện tại.
+Model bàn giao dùng các resource `Models/campus-flight-s11` và `Models/campus-dispatch-s11` (có bản tương ứng seed 29, 47). Để xem AI trong Editor, đặt Mode thành `dispatch-eval`, Flight Model và Dispatch Model theo hai resource này trước khi Play. Chế độ mặc định vẫn ghi rõ **tham chiếu theo luật**.
+
+Xem [bảng kết quả](docs/delivery-progress.md), [hướng dẫn tiếp tục/Colab](docs/delivery-continuation.md) và [tài liệu mô phỏng](docs/delivery-lab.md). Tài liệu cloud và các lần huấn luyện thất bại ban đầu được giữ dưới dạng lịch sử, phân biệt với kết quả cuối.

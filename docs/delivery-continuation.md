@@ -85,3 +85,25 @@ The clearance teacher assumes buildings below 24 m and clear fixed-pad approache
 The complete 18-condition flight validation belongs to immutable build `20ca169e32df4b3da5ea22ac65577553` and study `continuity-v2-r1`. Play Mode then exposed a default report-file collision. The fix assigns a unique default output session and increments completion counters only after the atomic report write; the smoke probe also fails on AeroLab runtime errors. Physics, observation/action contracts and flight/dispatch agents were unchanged.
 
 The follow-up study `continuity-v2-r2` records that validation as inherited evidence, not as a rerun on the new executable. `fork-delivery-study.py` verifies the original source/configuration archive against the parent hashes, permits only the two exact reviewed file revisions, and records every changed hash. It never resumes training across source changes. The evidence bundle includes that original source archive. All subsequent dispatch validation and final tests use the new immutable builds.
+
+## Final handoff
+
+The frozen continuity study completed all 2400 held-out episodes. Consult the generated evidence ledger for the exact means and variability. The learned dispatcher improves on-time delivery while completing fewer orders overall; all multi-order runs reach the horizon, so unfinished orders remain explicit.
+
+The release aliases are `Models/campus-flight-s11` and `Models/campus-dispatch-s11`, with corresponding seed-29/47 resources. They contain the same ONNX bytes as the selected research candidates. Flight provenance's original `qualified` boolean encodes the single-order flight gate only; complete logistics qualification is recorded in the study's ideal/noisy validation and final test results.
+
+`--action package` creates `AeroLab-source.zip`, `AeroLab-linux.zip`, `AeroLab-models-evidence.zip`, and `AeroLab-training.zip` beside the study JSON. Each has a SHA-256 sidecar and per-file manifest. The evidence archive retains the exact research executable; a later demo build may add resource aliases without changing controller weights. The training archive pins the original training player and includes the seed-11 dispatch checkpoint for resume/initialize-from. A completed training budget cannot be extended by silently changing `--steps`: start a new tag with `--initialize-from` when deliberately planning a further experiment.
+
+In the Colab notebook, start a new unique tag with `RESUME = False`. In a later session use the same bundle, tag and arguments with `RESUME = True`. If the VM vanished before exporting a zip, the notebook restores the verified Drive generations using:
+
+```bash
+.venv/bin/python tools/restore-delivery-backup.py --backup-dir /durable/snapshots --run YOUR_RUN_ID
+```
+
+This recovery path was also checked locally with an incomplete backup generation and a real optimizer checkpoint. Live Colab compatibility still requires running the notebook on the user's selected runtime.
+
+## Terrain coverage
+
+Here, layout variation means six static buildings with independently varied centers (±3 m around fixed anchors), full widths/depths approximately 4–8 m and heights in [5, 24) m. The ground remains flat; the depot and four pads are fixed. Each selected model's final continuation stage recorded 30 distinct DAgger layouts and three completed PPO episodes on three layouts, in addition to earlier training. The allowed seed pool is not a claim that every seed was trained.
+
+The roughly 26 m clearance-teacher prior overflies the generated buildings. These results do not establish hill/slope adaptation, flight through structures blocking that height, or reactive obstacle avoidance driven by range sensors. Those require a separately designed experiment and acceptance criteria.
