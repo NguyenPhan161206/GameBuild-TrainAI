@@ -38,6 +38,36 @@ lines+=['', 'These are 20-scenario pilot comparisons on the old flight model, no
  f"Logistics qualified: {state.get('qualified_logistics','pending')}", '',
  'Training: synthetic state coverage + DAgger + PPO fine-tuning. All inference qualification uses the frozen ONNX in Unity, without teacher mixing.',
  'Buildings remain below 24 m with fixed clear approaches. This does not demonstrate universal obstacle avoidance, real-drone calibration or legal permission.','',
- '## Reproduce / continue','', 'See [delivery-continuation.md](delivery-continuation.md), the study JSON and immutable evaluation manifests. Existing historical reports are retained. No commit, push, cloud resource purchase or real-drone control is part of this implementation.','']
+ '## Reproduce / continue','', 'See [delivery-continuation.md](delivery-continuation.md), the study JSON and immutable evaluation manifests. Existing historical reports are retained. Local milestone commits were explicitly requested; no push, cloud resource purchase or real-drone control was performed.','']
+extra=['## Frozen dispatch validation','', '| Seed | Sensors | Safe episodes | On time / generated | Outcomes |','| --- | --- | --- | --- | --- |']
+for seed in cfg['seeds']:
+ for noisy in [False,True]:
+  row=state.get('dispatch_validation',{}).get(f'{seed}-{noisy}')
+  if row:extra.append(f"| {seed} | {'noisy' if noisy else 'ideal'} | {row['operational_safe_episodes']}/{row['episodes']} | {row['on_time']}/{row['total_orders']} | {row['outcomes']} |")
+extra+=['', '## Held-out final comparison','', 'On-time percentages are mean and sample standard deviation across three independently trained models. Each logistics row contains 300 episodes and 3600 generated orders.','',
+ '| Sensors | Dispatcher | On time (%) | Delivered / generated | Safe episodes | Incidents |', '| --- | --- | --- | --- | --- | --- |']
+import csv
+export=[]
+for noisy in [False,True]:
+ for kind,label in [('fifo','FIFO'),('edd','Earliest deadline'),('ai','Learned dispatch')]:
+  keys=[f'{seed}-3-{kind}-{noisy}' for seed in cfg['seeds']]
+  if not all(key in state.get('test',{}) for key in keys):continue
+  rows=[state['test'][key] for key in keys];metrics=state.get('aggregates',{}).get(f'3-{kind}-{noisy}')
+  if not metrics:continue
+  rate=metrics['on_time_rate'];generated=sum(row['total_orders'] for row in rows)
+  delivered=sum(row['delivered'] for row in rows);safe=sum(row['operational_safe_episodes'] for row in rows)
+  incidents=sum(sum(n for outcome,n in row['outcomes'].items() if outcome not in ['Completed','Horizon']) for row in rows)
+  extra.append(f"| {'noisy' if noisy else 'ideal'} | {label} | {rate['mean']*100:.2f} ± {rate['sample_stdev']*100:.2f} | {delivered}/{generated} | {safe}/300 | {incidents} |")
+  export.append({'sensor':'noisy' if noisy else 'ideal','dispatcher':kind,'on_time_percent_mean':rate['mean']*100,'on_time_percent_stdev':rate['sample_stdev']*100,'delivered':delivered,'generated':generated,'safe_episodes':safe,'incidents':incidents,
+   'energy_per_episode_mean':metrics['mean_energy']['mean'],'energy_per_episode_stdev':metrics['mean_energy']['sample_stdev'],'distance_per_episode_mean':metrics['mean_distance']['mean']})
+if export:
+ with (state_path.parent/'comparison.csv').open('w',newline='') as stream:
+  writer=csv.DictWriter(stream,fieldnames=list(export[0]));writer.writeheader();writer.writerows(export)
+extra+=['', 'Safety and completion are separate from deadline performance. A successful horizon can contain unfinished orders or an in-progress sortie. These results support only the bounded synthetic campus.','',
+ '## Dispatch training milestones','', '| Budget | On time (%) | Incidents | Mean energy |','| --- | --- | --- | --- |']
+for budget,item in state.get('dispatch_milestones',{}).items():
+ score=item['score'];extra.append(f"| {budget} | {score['on_time_rate']*100:.2f} | {score['incidents']} | {score['mean_energy']:.2f} |")
+extra+=['', 'Milestone scores use 20 validation scenarios per condition; they are selection evidence, not held-out final scores.','']
+index=lines.index('## Reproduce / continue');lines[index:index]=extra
 (root/'docs/delivery-progress.md').write_text('\n'.join(lines))
 print(root/'docs/delivery-progress.md')

@@ -1,13 +1,17 @@
 #!/usr/bin/env python3
 """Gated, resumable continuity study. Training stops cleanly at session boundaries."""
-import argparse,json,pathlib,subprocess,sys,statistics
+import argparse,json,pathlib,subprocess,sys,statistics,fcntl
+from concurrent.futures import ThreadPoolExecutor,as_completed
 from delivery_runs import write_json,environment_hash,digest
 root=pathlib.Path(__file__).resolve().parents[1]
 p=argparse.ArgumentParser();p.add_argument('--config',type=pathlib.Path,default=root/'training/studies/continuity-v2.json')
 p.add_argument('--action',choices=['status','flight-validation','dispatch-train','dispatch-validation','final','package'],default='status')
 p.add_argument('--check-project',type=pathlib.Path,default=root/'artifacts/unity-check')
 p.add_argument('--session-minutes',type=float,default=120);p.add_argument('--backup-dir',type=pathlib.Path)
+p.add_argument('--workers',type=int,choices=[1,2,3],default=3,help='Independent evaluation players; training stays sequential')
 a=p.parse_args();cfg=json.loads(a.config.read_text());out=root/'artifacts/studies'/cfg['tag'];out.mkdir(parents=True,exist_ok=True)
+if a.action!='status':
+ study_lock=(out/'.study.lock').open('a+');fcntl.flock(study_lock,fcntl.LOCK_EX|fcntl.LOCK_NB)
 state_path=out/'study.json';identity={'config_sha256':digest(a.config),'environment_sha256':environment_hash(root)}
 state=json.loads(state_path.read_text()) if state_path.exists() else {'identity':identity,'tag':cfg['tag'],'flight_validation':{},'dispatch_validation':{},'test':{},'complete':False}
 if state['identity']!=identity:raise ValueError('Study configuration/environment changed; use a new study tag')
@@ -45,7 +49,13 @@ def freeze(model,name):
 def aggregate(rows):
  keys=['on_time_rate','delivered','on_time','operational_safe_episodes','mean_energy','mean_distance']
  return {key:{'mean':statistics.mean(r[key] for r in rows),'sample_stdev':statistics.stdev(r[key] for r in rows)} for key in keys}
-save()
+def evaluate_jobs(jobs,section):
+ # Each worker owns a distinct evaluation directory. Only this thread writes study state.
+ with ThreadPoolExecutor(max_workers=a.workers) as executor:
+  pending={executor.submit(evaluate,**arguments):key for key,arguments in jobs}
+  for future in as_completed(pending):
+   state[section][pending[future]]=future.result();save()
+if a.action!='status':save()
 if a.action=='flight-validation':
  for seed in cfg['seeds']:
   for noisy in [False,True]:
@@ -99,16 +109,20 @@ elif a.action=='dispatch-train':
  state['selected_dispatch_milestone']=chosen;save();build()
 elif a.action=='dispatch-validation':
  if not flight_gate():raise SystemExit('Flight gate has not passed.')
+ jobs=[]
  for seed in cfg['seeds']:
   for noisy in [False,True]:
-   key=f'{seed}-{noisy}';state['dispatch_validation'][key]=evaluate(seed,'ai',noisy,'validation',3,checkpoint=cfg['dispatch_models'][str(seed)]);save()
+   jobs.append((f'{seed}-{noisy}',dict(seed=seed,kind='ai',noisy=noisy,split='validation',stage=3,checkpoint=cfg['dispatch_models'][str(seed)])))
+ evaluate_jobs(jobs,'dispatch_validation')
 elif a.action=='final':
  if not flight_gate() or len(state['dispatch_validation'])!=6:raise SystemExit('Freeze candidates and complete validation before opening final test seeds.')
+ jobs=[]
  for seed in cfg['seeds']:
   for noisy in [False,True]:
    for stage,kind in [(1,'edd'),(3,'fifo'),(3,'edd'),(3,'ai')]:
     key=f'{seed}-{stage}-{kind}-{noisy}'
-    state['test'][key]=evaluate(seed,kind,noisy,'test',stage,checkpoint=cfg['dispatch_models'][str(seed)] if kind=='ai' else None);save()
+    jobs.append((key,dict(seed=seed,kind=kind,noisy=noisy,split='test',stage=stage,checkpoint=cfg['dispatch_models'][str(seed)] if kind=='ai' else None)))
+ evaluate_jobs(jobs,'test')
  state['aggregates']={}
  for noisy in [False,True]:
   for stage,kind in [(1,'edd'),(3,'fifo'),(3,'edd'),(3,'ai')]:
@@ -118,5 +132,5 @@ elif a.action=='final':
 elif a.action=='package':
  for kind in ['source','linux','evidence','training']:
   run('delivery-transfer.py','pack','--kind',kind,'--output',out/(cfg['tag']+'-'+kind+'.zip'))
-else:print(json.dumps(state,indent=2))
+else:print(json.dumps(state,indent=2));raise SystemExit(0)
 print(state_path)

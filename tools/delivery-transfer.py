@@ -93,6 +93,13 @@ if a.kind in ['linux','training']:
   if path.is_file() and not path.name.endswith('.meta'):files.add(path)
 if a.kind=='evidence':
  tree(root/'artifacts/evaluations');tree(root/'artifacts/studies');tree(root/'Assets/AeroLab/Resources/Models')
+ for path in (root/'results').rglob('*.json'):
+  if path.name in ['run.json','dagger.json','pretraining.json','calibration.json']:files.add(path)
+ for path in (root/'artifacts').glob('*invocation.json'):files.add(path)
+ if (root/'artifacts/datasets').is_dir():tree(root/'artifacts/datasets')
+ if (root/'artifacts/references').is_dir():tree(root/'artifacts/references')
+ if (root/'artifacts/portability/portability-final-v2').exists():
+  files.add(root/'artifacts/portability/portability-final-v2/acceptance.json')
  for folder in ['docs','training']:tree(root/folder)
  for name in ['core-checks.log','delivery-smoke.log','flight-regression-final.log']:
   if (root/'artifacts'/name).exists():files.add(root/'artifacts'/name)
