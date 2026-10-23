@@ -6,7 +6,7 @@ using UnityEngine;
 using NVector3=System.Numerics.Vector3;
 namespace AeroLab
 {
-    public sealed class DeliveryLab : MonoBehaviour
+    public sealed partial class DeliveryLab : MonoBehaviour
     {
         public DeliverySimulation Simulation {get;private set;}
         public bool Paused {get;private set;} = true;
@@ -42,7 +42,6 @@ namespace AeroLab
         private StreamWriter traceWriter;
         private Font font;
         private GUIStyle text, title;
-        private Vector2 orderScroll;
         private void OnEnable()
         {
             if(Simulation!=null)return;
@@ -73,6 +72,7 @@ namespace AeroLab
             if(!Application.isBatchMode || capturePath!="") BuildWorld();
             if(Mode!="reference") SetupAgents(args);
             if(Application.isBatchMode || capturePath!="") Paused=false;
+            if(CanEditScenario && Arg(args,"--layout-editor","false")=="true")ToggleLayoutEditor();
         }
         public static string Arg(string[] args,string key,string fallback)
         {int i=Array.IndexOf(args,key);return i>=0 && i+1<args.Length?args[i+1]:fallback;}
@@ -99,13 +99,14 @@ namespace AeroLab
         }
         public void NextScenario()
         {
+            if(CanEditScenario){Paused=true;return;}
             Seed = Mode=="flight" || Mode=="flight-demo" || Mode=="dispatch" ? (Seed+1)%8000 : Seed+1;
             ResetEpisode();
         }
         public void ResetEpisode()
         {
             if(traceWriter!=null){traceWriter.Dispose();traceWriter=null;}
-            Simulation=new DeliverySimulation(ScenarioConfig.Create(Seed,Noisy,Stage));Pilot.Reset(Simulation.Flight);previousGoal=Simulation.Flight.Goal;recorded=false;
+            Simulation=new DeliverySimulation(ScenarioForReset());Pilot.Reset(Simulation.Flight);previousGoal=Simulation.Flight.Goal;recorded=false;LastReport=null;
             if(!string.IsNullOrEmpty(traceDirectory))
             {
                 Directory.CreateDirectory(traceDirectory);
@@ -136,6 +137,7 @@ namespace AeroLab
             {
                 Directory.CreateDirectory(ReportDirectory);
                 var report=Simulation.Report(FlightModel,DispatchModel);
+                report.RunPurpose=CanEditScenario?"interactive":Mode=="flight"||Mode=="dispatch"||Mode=="flight-demo"?"training":"evaluation";
                 report.FlightModelSha256=ModelHash(FlightModel);report.DispatchModelSha256=ModelHash(DispatchModel);
                 #if UNITY_EDITOR
                 report.SourceSha256="editor-unbuilt";
@@ -156,8 +158,9 @@ namespace AeroLab
         {var data=Resources.Load<TextAsset>(resource+".provenance");return data==null?"":JsonUtility.FromJson<Provenance>(data.text).sha256;}
         private void Update()
         {
+            if(GUIUtility.keyboardControl!=0)return;
             if(Input.GetKeyDown(KeyCode.Escape))Paused=!Paused;
-            if(Input.GetKeyDown(KeyCode.R) && FlightAgent==null){ResetEpisode();}
+            if(Input.GetKeyDown(KeyCode.R) && CanEditScenario)RestartInteractive();
             if(Input.GetKeyDown(KeyCode.Space))Paused=false;
         }
         private void LateUpdate()
@@ -203,7 +206,14 @@ namespace AeroLab
             if(world!=null){world.SetActive(false);Destroy(world);}foreach(var material in materials)Destroy(material);materials.Clear();
             world=new GameObject("Delivery campus");world.transform.SetParent(transform);
             Box(new Vector3(80,.2f,80),new Vector3(0,-.15f,0),new Color(.09f,.17f,.22f));
-            foreach(var b in Simulation.Config.Buildings)Box(UnityVector(b.Half)*2,UnityVector(b.Center),new Color(.22f,.34f,.43f));
+            buildingVisuals.Clear();
+            for(int i=0;i<Simulation.Config.Buildings.Length;i++)
+            {
+                var b=Simulation.Config.Buildings[i];var box=Box(UnityVector(b.Half)*2,UnityVector(b.Center),new Color(.22f,.34f,.43f));
+                box.name="Tòa nhà "+(i+1);buildingVisuals.Add(box.GetComponent<Renderer>());
+                WorldLabel(new Vector3(b.Center.X,b.Half.Y*2+1,b.Center.Z),"NHÀ "+(i+1),.32f);
+            }
+            HighlightBuilding();
             Pad(Simulation.Config.Depot,new Color(.15f,.8f,.7f),"KHO / SẠC");for(int i=0;i<Simulation.Config.Pads.Length;i++)Pad(Simulation.Config.Pads[i],new Color(.95f,.66f,.23f),"GIAO "+(i+1));
             rotors.Clear();
             drone=Box(new Vector3(1,.45f,1),UnityVector(Simulation.Flight.Position),Color.white).transform;
@@ -225,8 +235,12 @@ namespace AeroLab
         private void Pad(NVector3 p,Color color,string name)
         {
             Box(new Vector3(6,.08f,6),new Vector3(p.X,.03f,p.Z),color);
-            var item=new GameObject(name,typeof(TextMesh));item.transform.SetParent(world.transform);item.transform.position=new Vector3(p.X,3,p.Z);item.transform.rotation=view.transform.rotation;
-            var label=item.GetComponent<TextMesh>();label.font=font;label.text=name;label.fontSize=48;label.characterSize=.22f;label.anchor=TextAnchor.MiddleCenter;label.color=Color.white;item.GetComponent<MeshRenderer>().sharedMaterial=font.material;
+            WorldLabel(new Vector3(p.X,3,p.Z),name,.22f);
+        }
+        private void WorldLabel(Vector3 position,string name,float size)
+        {
+            var item=new GameObject(name,typeof(TextMesh));item.transform.SetParent(world.transform);item.transform.position=position;item.transform.rotation=view.transform.rotation;
+            var label=item.GetComponent<TextMesh>();label.font=font;label.text=name;label.fontSize=48;label.characterSize=size;label.anchor=TextAnchor.MiddleCenter;label.color=Color.white;item.GetComponent<MeshRenderer>().sharedMaterial=font.material;
         }
         private LineRenderer Line(Color color,float width)
         {var item=new GameObject("Visual overlay",typeof(LineRenderer));item.transform.SetParent(world.transform);var line=item.GetComponent<LineRenderer>();var material=new Material(Shader.Find("Sprites/Default"));material.color=color;materials.Add(material);line.sharedMaterial=material;line.startWidth=line.endWidth=width;line.positionCount=2;return line;}
@@ -235,28 +249,34 @@ namespace AeroLab
             if((Application.isBatchMode && capturePath=="") || Simulation==null)return;
             if(text==null){text=new GUIStyle(GUI.skin.label){font=font,fontSize=15,wordWrap=true};text.normal.textColor=Color.white;title=new GUIStyle(text){fontSize=23,fontStyle=FontStyle.Bold};}
             GUI.Box(new Rect(15,15,370,Screen.height-30),GUIContent.none);GUILayout.BeginArea(new Rect(30,28,340,Screen.height-55));
+            sidebarScroll=GUILayout.BeginScrollView(sidebarScroll);
             GUILayout.Label("AEROLAB / DELIVERY",title);
             GUILayout.Label("Drone không camera · Khuôn viên mô phỏng",text);
             GUILayout.Space(12);GUILayout.Label("Chế độ: "+(FlightAgent==null?"Tham chiếu theo luật":Mode=="flight" || Mode=="dispatch"?"Đang huấn luyện PPO":"AI thử nghiệm (xem báo cáo đánh giá)"),text);
-            if(FlightAgent!=null){GUILayout.Label("Bay: "+FlightModel+"\nĐiều phối: "+DispatchModel,text);GUILayout.Label(qualificationLabel,text);}
-            GUILayout.Label($"Seed {Seed} | {Simulation.Elapsed:F1}s | {PhaseName(Simulation.Phase)}",text);
+            if(FlightAgent!=null){GUILayout.Label("Bay: "+FlightModel+"\nĐiều phối: "+DispatchModel,text);if(Simulation.Config.LayoutOrigin=="generated")GUILayout.Label(qualificationLabel,text);}
+            if(Simulation.Config.LayoutOrigin!="generated")GUILayout.Label("Bố trí thử nghiệm · kết quả AI cần đánh giá lại",text);
+            GUILayout.Label($"Seed đơn {Seed} · Bố trí {Simulation.Config.LayoutSeed}\n{Simulation.Elapsed:F1}s | {PhaseName(Simulation.Phase)}",text);
             GUILayout.Label($"Pin: {Simulation.Battery:F1}/{Simulation.Config.Capacity} | Tải: {Simulation.Payload:F1} kg",text);
             var report=Simulation.Report();GUILayout.Label($"Đã giao {report.Delivered} · Đúng hạn {report.OnTime}\nQuay về an toàn {report.SafeReturns} · {Simulation.Distance:F0} m",text);
             if(GUILayout.Button(Paused?"Bắt đầu / Tiếp tục":"Tạm dừng",GUILayout.Height(34)))Paused=!Paused;
+            if(CanEditScenario)
+            {
+                if(GUILayout.Button("Reset lượt (R)",GUILayout.Height(28)))RestartInteractive();
+                if(GUILayout.Button("Đổi bố trí tòa nhà",GUILayout.Height(28)))ShuffleInteractive();
+                if(GUILayout.Button(layoutEditorOpen?"Đóng chỉnh sửa tòa nhà":"Chỉnh vị trí / chiều cao",GUILayout.Height(28)))ToggleLayoutEditor();
+            }
             if(FlightAgent==null)
             {
-                if(GUILayout.Button("Lượt mới / seed tiếp theo")){Seed++;ResetEpisode();}
                 if(GUILayout.Button("Điều phối: "+(Rule==DispatchRule.Fifo?"Đến trước, giao trước":"Ưu tiên hạn giao")))Rule=Rule==DispatchRule.Fifo?DispatchRule.EarliestDeadline:DispatchRule.Fifo;
-                bool noise=GUILayout.Toggle(Noisy,"Sai số, độ trễ và mất mẫu cảm biến");if(noise!=Noisy){Noisy=noise;ResetEpisode();}
+                bool noise=GUILayout.Toggle(Noisy,"Sai số, độ trễ và mất mẫu cảm biến");if(noise!=Noisy){Noisy=noise;RestartInteractive();}
             }
             ShowSensors=GUILayout.Toggle(ShowSensors,"Hiện tia khoảng cách (mất mẫu: ẩn)");
             GUILayout.Label("Trắng: vệt bay thực tế · Xanh: tuyến tham chiếu",text);
             GUILayout.Space(10);GUILayout.Label("ĐƠN HÀNG",text);
-            orderScroll=GUILayout.BeginScrollView(orderScroll,GUILayout.Height(Mathf.Max(80,Screen.height-(FlightAgent==null?600:710))));
             foreach(var order in Simulation.Orders.Where(o=>o.Status!=OrderStatus.Scheduled).Take(12))GUILayout.Label($"#{order.Spec.Id:00} → Điểm {order.Spec.Destination+1} | {StatusName(order.Status)}\nHạn {order.Spec.Deadline:F0}s · {order.Spec.Mass:F1} kg",text);
-            GUILayout.EndScrollView();
             if(!Simulation.Running)GUILayout.Label("Kết quả: "+Simulation.Result,text);
-            GUILayout.Label("Pin là mô hình quy ước. Pháp lý khu vực: chưa xác minh.",text);GUILayout.EndArea();
+            GUILayout.Label("Pin là mô hình quy ước. Pháp lý khu vực: chưa xác minh.",text);GUILayout.EndScrollView();GUILayout.EndArea();
+            DrawLayoutEditor();
         }
         private void OnDestroy(){if(traceWriter!=null)traceWriter.Dispose();foreach(var m in materials)if(m!=null)Destroy(m);}
         private static string PhaseName(DeliveryPhase phase)

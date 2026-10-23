@@ -40,6 +40,7 @@ namespace AeroLab
         public override void OnEpisodeBegin()
         {
             if(Lab==null)return;
+            if(Lab.InteractiveResetInProgress)return;
             if(flightTraining && episode++>0){Lab.NextScenario();}
         }
         public override void CollectObservations(VectorSensor sensor)

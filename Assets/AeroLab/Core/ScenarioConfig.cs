@@ -17,8 +17,10 @@ namespace AeroLab.Core
     }
     [Serializable] public sealed class ScenarioConfig
     {
-        public const string Version = "delivery-v2";
+        public const string Version = "delivery-v3";
         public int Seed;
+        public int LayoutSeed;
+        public string LayoutOrigin = "generated";
         public float Duration = 900, Capacity = 100, Reserve = 12, ChargeRate = 1;
         public float MaxPayload = 2, IdlePower = 0.12f, PayloadPower = 0.04f, TravelCost = 0.008f;
         public Vector3 Depot;
@@ -30,7 +32,7 @@ namespace AeroLab.Core
         public static ScenarioConfig Create(int seed = 0, bool noisy = false, int stage = 3)
         {
             var rng = new SeedRandom(seed);
-            var c = new ScenarioConfig { Seed = seed, Sensors = noisy ? SensorConfig.Noisy() : new SensorConfig() };
+            var c = new ScenarioConfig { Seed = seed, LayoutSeed = seed, Sensors = noisy ? SensorConfig.Noisy() : new SensorConfig() };
             c.Depot = new Vector3(-30, 0.5f, -30);
             c.Pads = new[] { new Vector3(28, .5f, -28), new Vector3(28, .5f, 28), new Vector3(-28, .5f, 28), new Vector3(0, .5f, 30) };
             var boxes = new List<Building>();

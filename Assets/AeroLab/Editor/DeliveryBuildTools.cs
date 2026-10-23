@@ -43,6 +43,18 @@ namespace AeroLab.Editor
             var probe=lab.gameObject.AddComponent<RuntimeSmokeProbe>();probe.Delivery=true;
             EditorApplication.EnterPlaymode();
         }
+        [MenuItem("AeroLab/Run layout editor Play Mode smoke")]
+        public static void LayoutSmoke()
+        {
+            if(EditorApplication.isPlayingOrWillChangePlaymode)throw new InvalidOperationException("Stop Play Mode before running smoke checks");
+            Validate();
+            var lab=UnityEngine.Object.FindAnyObjectByType<DeliveryLab>();
+            lab.Mode="dispatch-eval";lab.FlightModel="Models/campus-flight-s11";lab.DispatchModel="Models/campus-dispatch-s11";
+            lab.Stage=3;lab.EvaluationCount=0;lab.AllowBatchInteractionForTests=true;
+            lab.LayoutStoragePath="artifacts/layout-checks/"+Guid.NewGuid().ToString("N")+".json";
+            lab.gameObject.AddComponent<RuntimeLayoutSmokeProbe>();
+            EditorApplication.EnterPlaymode();
+        }
         [MenuItem("AeroLab/Build/Delivery Linux x64")]
         public static void Linux()
         {

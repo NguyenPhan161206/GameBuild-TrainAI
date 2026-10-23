@@ -12,6 +12,8 @@ Physics is the existing assisted, fixed-attitude 50 Hz C# integration with swept
 
 `ScenarioConfig` is a programmatic configuration API; do not mutate its fields during an episode. The generator changes building centers, widths and heights independently. The reference controller runs four-neighbour A* at 16 m with hull and tracking margin, checks vertical approach segments and smooths visible path segments. The reference has a known map and exact state; it is not a learned policy and is not a sensor-limited comparator.
 
+Interactive reference/frozen-model sessions also provide **Reset lượt**, **Đổi bố trí tòa nhà**, and **Chỉnh vị trí / chiều cao**. See [layout-editor.md](layout-editor.md) for flat-ground building edits, save/load and reset semantics, and [flight-inputs.md](flight-inputs.md) for the model's 26 inputs and learned height prior. Custom layouts are labelled separately from research evidence; batch evaluation/training cannot use the editor.
+
 ## Energy and safety semantics
 
 Battery uses arbitrary research units, initially 100; reserve 12; depot charge rate 1 unit/s. Payload limit is 2 kg. Per flight step:

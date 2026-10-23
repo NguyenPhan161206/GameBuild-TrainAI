@@ -19,6 +19,8 @@ Mở **AeroLab → Open delivery campus**, bấm **Play → Bắt đầu / Tiế
 
 Chạy `bash tools/setup-delivery-ai.sh` trước khi Unity import trong checkout mới. Xem [hướng dẫn DeliveryLab](docs/delivery-lab.md) để kiểm thử, build, huấn luyện hai tầng PPO, đóng băng model và đánh giá theo seed. Package ML-Agents 4.0.0 cần bản vá API Match3 có điều kiện và cấu hình importer gRPC Linux để biên dịch với Unity 6000.6; setup tái tạo bản vá từ archive chính thức đã kiểm checksum.
 
+Trong bản tương tác có **Reset lượt**, **Đổi bố trí tòa nhà** và **Chỉnh vị trí / chiều cao**. Có thể nhập X/Z, chiều cao, lưu/nạp bố trí trên nền phẳng; mỗi lần áp dụng sẽ tạm dừng và reset drone cùng đơn hàng. Xem [cách chỉnh tòa nhà](docs/layout-editor.md) và [26 đầu vào ảnh hưởng đến AI bay](docs/flight-inputs.md). Bố trí tự chỉnh cần đánh giá riêng.
+
 ## Tiếp tục huấn luyện và dùng Colab
 
 Xem [quy trình lưu–khôi phục, chuyển máy và nghiên cứu nhiều chuyến](docs/delivery-continuation.md). Mỗi phiên mặc định tối đa hai giờ; dùng lại đúng cấu hình với `--resume` để tiếp tục checkpoint đã kiểm tra. [Notebook Colab](notebooks/AeroLab-Colab.ipynb) hỗ trợ phiên mới và khôi phục snapshot từ Drive; chưa được chạy trên Colab thật. Quy trình đóng gói–chuyển thư mục–tiếp tục–nhập lại checkpoint đã qua kiểm tra cục bộ.
@@ -111,6 +113,7 @@ Mô phỏng chạy bước cố định 0,02 giây; hình khối và va chạm A
 
 ## Tài liệu
 
+- [Kiến trúc dự án và cây thư mục](docs/project-architecture.md)
 - [Đặc tả phiên bản đầu — bước 1](docs/v1-spec.md)
 - [Kế hoạch kiểm tra công nghệ và môi trường — bước 2](docs/step-2-environment-plan.md)
 - [Kết quả kiểm tra và các phần còn bị chặn](docs/environment-validation.md)

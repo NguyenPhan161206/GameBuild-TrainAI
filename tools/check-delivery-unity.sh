@@ -25,8 +25,9 @@ fi
 case "${1:-validate}" in
   validate) method=AeroLab.Editor.DeliveryBuildTools.Validate; quit=(-quit);;
   smoke) method=AeroLab.Editor.DeliveryBuildTools.Smoke; quit=();;
+  layout-smoke) method=AeroLab.Editor.DeliveryBuildTools.LayoutSmoke; quit=();;
   build) method=AeroLab.Editor.DeliveryBuildTools.Linux; quit=(-quit);;
-  *) echo 'Usage: check-delivery-unity.sh [validate|smoke|build]' >&2; exit 2;;
+  *) echo 'Usage: check-delivery-unity.sh [validate|smoke|layout-smoke|build]' >&2; exit 2;;
 esac
 trace_prefix=()
 if [[ "${AEROLAB_TRACE_UNITY:-0}" == 1 ]]; then

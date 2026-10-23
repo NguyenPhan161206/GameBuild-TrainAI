@@ -7,6 +7,37 @@ internal static class DeliveryChecks
 {
     public static void Run(Action<string,Action> check)
     {
+        check("Campus edits detach geometry, orders and sensors from the running scenario",()=>{
+            var original=ScenarioConfig.Create(42,true,3);var before=DeliveryReportJson.Serialize(new DeliverySimulation(original).Report());
+            var edited=CampusLayout.Edit(original,0,-18,-12,28);
+            Assert(edited.Buildings[0].Center==new Vector3(-18,14,-12));
+            Assert(edited.Buildings[0].Half.X==original.Buildings[0].Half.X && edited.Buildings[0].Half.Z==original.Buildings[0].Half.Z);
+            Assert(edited.LayoutOrigin=="manual" && edited.Seed==original.Seed);
+            edited.Orders[0].Mass=1.99f;edited.Sensors.DelayTicks=9;edited.Pads[0]=Vector3.Zero;
+            Assert(before==DeliveryReportJson.Serialize(new DeliverySimulation(original).Report()),"Edit leaked into source");
+        });
+        check("Campus layout rejects nonfinite, out-of-bounds, overlapping and blocked-pad edits atomically",()=>{
+            var c=ScenarioConfig.Create(42,false,3);var original=c.Buildings[0];
+            foreach(var edit in new[]{new Vector3(float.NaN,10,0),new Vector3(40,10,0),new Vector3(0,31,0),new Vector3(0,0,0),
+                new Vector3(c.Buildings[1].Center.X,10,c.Buildings[1].Center.Z),new Vector3(c.Depot.X,10,c.Depot.Z)})
+            {
+                bool rejected=false;try{CampusLayout.Edit(c,0,edit.X,edit.Z,edit.Y);}catch(ArgumentException){rejected=true;}
+                Assert(rejected && c.Buildings[0].Center==original.Center && c.Buildings[0].Half==original.Half);
+            }
+        });
+        check("Campus shuffle preserves order stream; reset uses edited collision and sensing geometry",()=>{
+            var c=ScenarioConfig.Create(42,false,3);var shuffled=CampusLayout.Randomize(c,43,3);
+            Assert(shuffled.Seed==42 && shuffled.LayoutSeed==43 && shuffled.LayoutOrigin=="randomized");
+            Assert(shuffled.Buildings[0].Center!=c.Buildings[0].Center);
+            for(int i=0;i<c.Orders.Length;i++)Assert(shuffled.Orders[i].Id==c.Orders[i].Id && shuffled.Orders[i].Destination==c.Orders[i].Destination && shuffled.Orders[i].Release==c.Orders[i].Release && shuffled.Orders[i].Deadline==c.Orders[i].Deadline && shuffled.Orders[i].Mass==c.Orders[i].Mass);
+            c.Buildings=new[]{new Building(new Vector3(0,5,0),new Vector3(2,5,2))};
+            var edited=CampusLayout.Edit(c,0,0,0,28);var sim=new DeliverySimulation(c);
+            sim.Flight.Position=new Vector3(-10,20,0);Assert(sim.Flight.Sensors()[0]>.5f);
+            sim.Reset(edited);sim.Flight.Position=new Vector3(-10,20,0);Assert(sim.Flight.Sensors()[0]<.3f);
+            Assert(sim.Tick==0 && sim.Battery==edited.Capacity && sim.Flight.Buildings[0].Half.Y==14);
+            using(var report=JsonDocument.Parse(DeliveryReportJson.Serialize(sim.Report())))
+            Assert(report.RootElement.GetProperty("Config").GetProperty("LayoutOrigin").GetString()=="manual");
+        });
         check("Trace is observational and leg reports close once per transition",()=>{
             var c=ScenarioConfig.Create(23,true,0);var a=new DeliverySimulation(c);var b=new DeliverySimulation(c);
             int events=0;b.TraceSink=frame=>{events++;Assert(frame.Observation==null || frame.Observation.Length==26);};

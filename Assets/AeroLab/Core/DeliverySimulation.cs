@@ -47,6 +47,7 @@ namespace AeroLab.Core
     [Serializable] public sealed class EpisodeReport
     {
         public string ReportVersion="delivery-report-2";
+        public string RunPurpose="core-simulation";
         public string EnvironmentVersion = ScenarioConfig.Version, FlightObservationVersion=FlightObservation.Version, DispatchObservationVersion=DispatchObservation.Version;
         public string FlightModel="reference-route", DispatchModel="fifo", SensorMode, Result;
         public string FlightModelSha256="", DispatchModelSha256="", SourceSha256="";

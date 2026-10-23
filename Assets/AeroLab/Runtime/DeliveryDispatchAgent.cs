@@ -30,7 +30,7 @@ namespace AeroLab
                 throw new InvalidOperationException("Training mode requires a connected Python trainer; no heuristic fallback is allowed.");
         }
         public override void OnEpisodeBegin()
-        {lastRequest=-1;if(Lab!=null && episode++>0){Lab.NextScenario();}}
+        {lastRequest=-1;if(Lab!=null && !Lab.InteractiveResetInProgress && episode++>0){Lab.NextScenario();}}
         private void FixedUpdate()
         {
             if(Lab.Paused || !Lab.Simulation.Running)return;
