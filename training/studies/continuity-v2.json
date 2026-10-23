@@ -1,0 +1,61 @@
+{
+  "tag": "continuity-v2-r2",
+  "seeds": [
+    11,
+    29,
+    47
+  ],
+  "flight_models": {
+    "11": "Models/continuity-ppo-v2-flight-s11",
+    "29": "Models/continuity-ppo-v2-flight-s29",
+    "47": "Models/continuity-ppo-v2-flight-s47"
+  },
+  "dispatch_tag": "continuity-dispatch-v2",
+  "dispatch_models": {
+    "11": "Models/continuity-dispatch-v2-s11",
+    "29": "Models/continuity-dispatch-v2-s29",
+    "47": "Models/continuity-dispatch-v2-s47"
+  },
+  "time_scale": 1000,
+  "training_seed_range": [
+    0,
+    7999
+  ],
+  "validation_seed_range": [
+    11000,
+    11099
+  ],
+  "final_test_seed_range": [
+    30000,
+    30099
+  ],
+  "historical_test_seed_range": [
+    20000,
+    20099
+  ],
+  "dispatch_checkpoints": [
+    2048,
+    8192,
+    32768
+  ],
+  "flight_training_method": "fine-v1 frozen source -> 3 DAgger rounds of 10 noisy multi-order episodes, 60 epochs/round -> at most 30000 PPO decisions",
+  "feature_mask": false,
+  "scope": "bounded synthetic campus, clearance prior; no hardware or universal obstacle-avoidance claim",
+  "inherited_validation": {
+    "parent": "continuity-v2-r1",
+    "parent_state_sha256": "ba3516708a014ddd82474581efd5dec5095268ef00d3f31dd5127137a645aa05",
+    "archive_sha256": "9af923b46e288fa1c5330cb04c200f6d2c0d8bf918ff9c6748a2cb2ef297ec1d",
+    "changes": {
+      "Assets/AeroLab/Runtime/DeliveryLab.cs": {
+        "before": "43fef1187002ad6df852dc95b727dd17fac889a7b53aa9bbe7d6378297fb288b",
+        "after": "23f2c5fa9e9c65ad141b19b7d81c75d9522fb836da7641aa55f5a27bf418f634"
+      },
+      "Assets/AeroLab/Runtime/RuntimeSmokeProbe.cs": {
+        "before": "b3d015a5d5248d31ece18f31ae11742bb6999fab16b9833c39b5863618bd48fe",
+        "after": "1486478298380fc4fb61e00ea74e3f5b051389b0aac6209ccb160f744fb2b7c4"
+      }
+    },
+    "reviewed_reason": "Unique default report session directories; counters advance only after durable report write; smoke fails on AeroLab runtime errors. Physics, observations, actions and agent adapters unchanged.",
+    "qualification_build": "Original immutable parent build; final evaluation uses the new build."
+  }
+}

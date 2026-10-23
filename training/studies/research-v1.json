@@ -1,0 +1,103 @@
+{
+  "study": "research-v1",
+  "status": "evaluation in progress; operational summaries are separate",
+  "trainer_seeds": [
+    11,
+    29,
+    47
+  ],
+  "selected_flight_method": "supervised state coverage + DAgger + PPO fine-tuning",
+  "pure_ppo_success_not_assumed": true,
+  "observations": "flight-delivery-1, 26 vectors, no image input",
+  "final_control_features_only": false,
+  "synthetic_dataset": {
+    "generator": "DeliveryRunner --control-samples",
+    "count": 100000,
+    "seed": 811,
+    "sha256": "b3d8831b3df86874d07c06f4116a5801e42b8951afdc5a7dd600c9a162bc66f1",
+    "physical_rollouts": false
+  },
+  "specification_demo": {
+    "scenario_seeds": [
+      500,
+      519
+    ],
+    "sha256": "ca5d0d6c9724f9fb1c8a33fab97981de9f109c4b2e8e4f9cb03fea8e3cd670e0"
+  },
+  "pretraining": {
+    "tag": "supervised-v1",
+    "epochs": 120,
+    "architecture": "128x2",
+    "normalize": false
+  },
+  "dagger": [
+    {
+      "tag": "dagger-v1",
+      "iterations": 4,
+      "episodes_per_iteration": 30,
+      "epochs_per_iteration": 60,
+      "initial_teacher_probability": 0.5,
+      "probability_schedule": "initial/(iteration+1)",
+      "scenario_start": 500,
+      "stage": 1
+    },
+    {
+      "tag": "dagger-v2",
+      "iterations": 3,
+      "episodes_per_iteration": 30,
+      "epochs_per_iteration": 60,
+      "initial_teacher_probability": 0,
+      "scenario_start": 1200,
+      "stage": 1
+    }
+  ],
+  "flight_ppo": {
+    "tag": "fine-v1",
+    "stages": [
+      1,
+      2,
+      3
+    ],
+    "minimum_decisions_each_stage": 10000,
+    "learning_rate": 3e-05,
+    "beta": 0,
+    "normalize": false,
+    "time_scale": 200,
+    "noisy_stages": [
+      3
+    ]
+  },
+  "flight_gate": {
+    "split": "validation",
+    "stage": 1,
+    "episodes_per_seed": 100,
+    "minimum_safe_roundtrips": 90,
+    "ideal_only": true
+  },
+  "dispatch_ppo": {
+    "tag": "dispatch-pilot-v1",
+    "minimum_decisions": 1024,
+    "batch_size": 32,
+    "buffer_size": 128,
+    "stage": 3,
+    "noisy": true,
+    "time_scale": 1000,
+    "flight_weights_frozen": true,
+    "checkpoint_interval": 128,
+    "summary_freq": 128,
+    "budget_scope": "pilot comparison, not converged dispatch qualification"
+  },
+  "assessment": {
+    "validation_seed_start": 10000,
+    "test_seed_start": 20000,
+    "test_count": 100,
+    "logistics_stage": 3,
+    "rules": [
+      "FIFO",
+      "earliest deadline",
+      "learned dispatch"
+    ],
+    "ideal_and_noisy_separate": true
+  },
+  "teacher_limit": "Known generator height bound <24 m and fixed clear approaches; cruise prior 26 m. No real-hardware or range-reasoning claim."
+}
